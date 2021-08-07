@@ -34,7 +34,7 @@ docs_packages = [
 ]
 
 setup(
-    name="reighns_mnist",
+    name="reighns-mnist",
     version="0.1",
     license="MIT",
     description="Hongnan G's toy project for MNIST.",
