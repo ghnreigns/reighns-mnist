@@ -59,6 +59,8 @@ class Trainer:
             output = self.model(data)
             # loss = F.nll_loss(output, target)
             loss = self.loss_fn(output, target)
+            config.logger.warning(
+                msg="CE Loss combines LogSoftmax and NLLLoss in one single class. If your head output layer has LogSoftmax, then use NLLLoss for similar effects of CE loss, but note on the numerical instability that it may cause.")
             loss.backward()
             self.optimizer.step()
             if batch_idx % self.params.log_interval == 0:
