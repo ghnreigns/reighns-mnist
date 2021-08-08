@@ -92,7 +92,7 @@ class Trainer:
                 output = self.model(data)
                 # sum up batch loss
                 test_loss += self.loss_fn(output,
-                                          target, reduction='sum').data.item()
+                                          target).data.item()
                 # test_loss += F.nll_loss(output, target,
                 #                         reduction='sum').data.item()
                 # get the index of the max log-probability
