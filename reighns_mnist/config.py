@@ -105,3 +105,6 @@ logging.config.dictConfig(logging_config)
 logger = logging.getLogger("root")
 # set markup to true for console
 logger.handlers[0] = RichHandler(markup=True)
+
+logger.warning(
+    msg="CE Loss combines LogSoftmax and NLLLoss in one single class. If your head output layer has LogSoftmax, then use NLLLoss for similar effects of CE loss, but note on the numerical instability that it may cause.")

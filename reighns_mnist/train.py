@@ -59,8 +59,6 @@ class Trainer:
             output = self.model(data)
             # loss = F.nll_loss(output, target)
             loss = self.loss_fn(output, target)
-            config.logger.warning(
-                msg="CE Loss combines LogSoftmax and NLLLoss in one single class. If your head output layer has LogSoftmax, then use NLLLoss for similar effects of CE loss, but note on the numerical instability that it may cause.")
             loss.backward()
             self.optimizer.step()
             if batch_idx % self.params.log_interval == 0:
@@ -105,9 +103,10 @@ class Trainer:
         test_accuracy = 100.0 * correct / len(test_loader.dataset)
         print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
             test_loss, correct, len(test_loader.dataset), test_accuracy))
-        step = (epoch + 1) * len(self.train_loader)
-        self.log_scalar('test_loss', test_loss, step)
-        self.log_scalar('test_accuracy', test_accuracy, step)
+        # TODO: Correct the below code into a new method.
+        # step = (epoch + 1) * len(self.train_loader)
+        # self.log_scalar('test_loss', test_loss, step)
+        # self.log_scalar('test_accuracy', test_accuracy, step)
 
     def log_scalar(self, name, value, step):
         """Log a scalar value to both MLflow and TensorBoard"""
