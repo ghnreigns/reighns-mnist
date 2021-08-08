@@ -1,0 +1,11 @@
+{
+    "train_bs": 64,
+    "val_bs": 128,
+    "test_bs": 128,
+    "epochs": 10,
+    "base_lr": 1e-2,
+    "momentum": 0.5,
+    "seed": 1992,
+    "cuda": true,
+    "log_interval": 200
+}

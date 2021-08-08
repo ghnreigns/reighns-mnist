@@ -63,7 +63,7 @@ setup(
     dependency_links=[],
     entry_points={
         "console_scripts": [
-            "hn = app.cli:app",
+            "hn_mnist = app.cli:app",
         ],
     },
 )
