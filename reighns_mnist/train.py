@@ -40,6 +40,7 @@ class Trainer:
         writer=None
     ):
         # Set params
+        self.params = params
         self.model = model
         self.device = device
         self.loss_fn = loss_fn
@@ -56,7 +57,8 @@ class Trainer:
             data, target = Variable(data), Variable(target)
             self.optimizer.zero_grad()
             output = self.model(data)
-            loss = F.nll_loss(output, target)
+            # loss = F.nll_loss(output, target)
+            loss = self.loss_fn(output, target)
             loss.backward()
             self.optimizer.step()
             if batch_idx % self.params.log_interval == 0:
@@ -67,7 +69,7 @@ class Trainer:
                 step = self.params.epochs * len(train_loader) + batch_idx
                 self.writer.add_scalar(tag='train_loss',
                                        scalar_value=loss.data.item(), global_step=step)
-                self.model.log_weights(step)
+                self.log_weights(step)
 
                 # Logging
                 config.logger.info(
@@ -78,7 +80,7 @@ class Trainer:
                     # f"_patience: {_patience}"
                 )
 
-    def test(self, epoch, test_loader):
+    def test(self, test_loader):
         self.model.eval()
         test_loss = 0
         correct = 0
@@ -89,8 +91,10 @@ class Trainer:
                 data, target = Variable(data), Variable(target)
                 output = self.model(data)
                 # sum up batch loss
-                test_loss += F.nll_loss(output, target,
-                                        reduction='sum').data.item()
+                test_loss += self.loss_fn(output,
+                                          target, reduction='sum').data.item()
+                # test_loss += F.nll_loss(output, target,
+                #                         reduction='sum').data.item()
                 # get the index of the max log-probability
                 pred = output.data.max(1)[1]
                 correct += pred.eq(target.data).cpu().sum().item()
@@ -107,3 +111,21 @@ class Trainer:
         """Log a scalar value to both MLflow and TensorBoard"""
         self.writer.add_scalar(tag=name, scalar_value=value, global_step=step)
         mlflow.log_metric(name, value, step=step)
+
+    def log_weights(self, step):
+        self.writer.add_histogram(tag='conv1_weight',
+                                  values=self.model.conv1.weight.data, global_step=step)
+        # writer.add_summary(writer.add_histogram('weights/conv1/bias',
+        #                                         model.conv1.bias.data).eval(), step)
+        # writer.add_summary(writer.add_histogram('weights/conv2/weight',
+        #                                         model.conv2.weight.data).eval(), step)
+        # writer.add_summary(writer.add_histogram('weights/conv2/bias',
+        #                                                  model.conv2.bias.data).eval(), step)
+        # writer.add_summary(writer.add_histogram('weights/fc1/weight',
+        #                                         model.fc1.weight.data).eval(), step)
+        # writer.add_summary(writer.add_histogram('weights/fc1/bias',
+        #                                         model.fc1.bias.data).eval(), step)
+        # writer.add_summary(writer.add_histogram('weights/fc2/weight',
+        #                                         model.fc2.weight.data).eval(), step)
+        # writer.add_summary(writer.add_histogram('weights/fc2/bias',
+        #                                         model.fc2.bias.data).eval(), step)
