@@ -1,0 +1,15 @@
+artifact_uri: file://C:/Users/reigHns/mnist/stores/model/0/e952c17acdcd42aea45d926adf9cc492/artifacts
+end_time: 1628402650336
+entry_point_name: ''
+experiment_id: '0'
+lifecycle_stage: active
+name: ''
+run_id: e952c17acdcd42aea45d926adf9cc492
+run_uuid: e952c17acdcd42aea45d926adf9cc492
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1628402627143
+status: 4
+tags: []
+user_id: reigHns
