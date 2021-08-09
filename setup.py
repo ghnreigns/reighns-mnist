@@ -1,4 +1,3 @@
-
 # setup.py
 # Setup installation for the application
 
