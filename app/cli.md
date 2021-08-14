@@ -6,4 +6,4 @@ In our `cli.py`, we create numerous functions and we use Typer module to run it 
 
 ---
 
-To demonstrate, 
+To demonstrate, type `hn_mist train-model` this will run this function.

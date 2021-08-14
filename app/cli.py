@@ -24,7 +24,7 @@ from collections import namedtuple
 from typing import *
 from pathlib import Path
 from chardet.universaldetector import UniversalDetector
-from reighns_mnist import config, mnist
+from reighns_mnist import config, mnist, callbacks
 import typer
 
 # Typer CLI app
@@ -98,22 +98,25 @@ def train_model(params_fp: Path = Path(config.CONFIG_DIR, "params.json"),
 
         # construct Trainer class
         model = models.Model().to(device=config.DEVICE)
-        loss_fn: torch.nn = torch.nn.CrossEntropyLoss()
+        train_loss_fn: torch.nn = torch.nn.CrossEntropyLoss()
+        val_loss_fn: torch.nn = torch.nn.CrossEntropyLoss()
         optimizer: torch.optim = torch.optim.SGD(
             model.parameters(), lr=params.base_lr, momentum=params.momentum)
         scheduler: torch.nn = None
         trial = None
         trainer = train.Trainer(params=params, model=model, device=config.DEVICE,
-                                loss_fn=loss_fn, optimizer=optimizer,
-                                scheduler=scheduler, trial=trial, writer=writer)
+                                train_loss_fn=train_loss_fn, val_loss_fn=val_loss_fn, optimizer=optimizer,
+                                scheduler=scheduler, trial=trial, writer=writer,
+                                early_stopping=callbacks.EarlyStopping(patience=3,
+                                                                       mode=callbacks.Mode.MIN,
+                                                                       min_delta=1e-5))
 
-        for epoch in range(1, params.epochs + 1):
-            # print out active_run
-            print("Active Run ID: %s, Epoch: %s \n" %
-                  (run_id, epoch))
-
-            trainer.train(train_loader)
-            trainer.test(test_loader)
+        # for epoch in range(1, params.epochs + 1):
+        #     # print out active_run
+        #     print("Active Run ID: %s, Epoch: %s \n" %
+        #           (run_id, epoch))
+        trainer.fit(train_loader, test_loader)
 
         print("Uploading TensorFlow events as a run artifact.")
         mlflow.log_artifacts(output_dir, artifact_path="events")
+        print("Command Line: mlflow ui")

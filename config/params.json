@@ -8,8 +8,9 @@
     "seed": 1992,
     "cuda": true,
     "log_interval": 200,
-
+    "patience": 3,
     "dataloader": {"num_workers": 1,
-                    "pin_memory":true}
+                    "pin_memory":true},
+    "model": {"model_name": "cnn"}
 
 }
