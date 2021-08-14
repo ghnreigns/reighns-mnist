@@ -119,4 +119,6 @@ def train_model(params_fp: Path = Path(config.CONFIG_DIR, "params.json"),
 
         print("Uploading TensorFlow events as a run artifact.")
         mlflow.log_artifacts(output_dir, artifact_path="events")
-        print("Command Line: mlflow ui")
+        print(f"Command Line: mlflow ui {run_id}")
+        print(
+            f"Run Tensorboard @ tensorboard --logdir ./stores/tensorboard/{run_id}")

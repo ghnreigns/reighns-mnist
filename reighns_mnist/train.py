@@ -3,6 +3,7 @@ import enum
 
 import mlflow.pytorch
 import mlflow
+from mlflow.utils.logging_utils import eprint
 # Trains using PyTorch and logs training metrics and weights in TensorFlow event format to the MLflow run's artifact directory.
 # This stores the TensorFlow events in MLflow for later access using TensorBoard.
 #
@@ -153,7 +154,6 @@ class Trainer:
             config.logger.info("\nTime: {}\nLR: {}".format(timestamp, curr_lr))
 
             train_dict: Dict = self.run_train(train_loader)
-            print(train_dict)
 
             # Note that train_dict['train_loss'] returns a list of loss [0.3, 0.2, 0.1 etc] and since _epoch starts from 1, we therefore
             # index this list by _epoch - 1 to get the current epoch loss.
@@ -169,6 +169,8 @@ class Trainer:
             config.logger.info(f"[RESULT]: Validation. Epoch {_epoch} | Avg Val Summary Loss: {val_dict['val_loss'][_epoch-1]:.3f} | "
                                f"Val Acc: {val_dict['val_acc'][_epoch-1]:.3f} | "
                                f"Time Elapsed: {val_dict['time_elapsed']}")
+
+            self.log_scalar('Val Acc', val_dict['val_acc'][_epoch-1], _epoch)
 
             # Early Stopping code block
             if self.early_stopping is not None:
@@ -225,9 +227,10 @@ class Trainer:
             cumulative_train_loss += (curr_batch_train_loss.detach().item() -
                                       cumulative_train_loss) / (step)
 
-            self.writer.add_scalar(tag='train_loss',
-                                   scalar_value=curr_batch_train_loss.data.item(), global_step=step)
             self.log_weights(step)
+            # running loss
+            self.log_scalar('running_train_loss',
+                            curr_batch_train_loss.data.item(), step)
 
         return cumulative_train_loss
 
@@ -264,6 +267,10 @@ class Trainer:
                 Y_TRUES.extend(y_true.cpu().numpy())
                 VAL_LOGITS.extend(logits.cpu().numpy())
 
+                # running loss
+                self.log_scalar('running_val_loss',
+                                curr_batch_val_loss.data.item(), step)
+
             argmax = np.argmax(Y_PROBS, axis=1)
             correct = np.equal(argmax, np.asarray(Y_TRUES))
             total = correct.shape[0]
@@ -273,13 +280,15 @@ class Trainer:
 
         return cumulative_val_loss, accuracy
 
-        # TODO: Correct the below code into a new method.
-        # step = (epoch + 1) * len(self.train_loader)
-        # self.log_scalar('test_loss', test_loss, step)
-        # self.log_scalar('test_accuracy', test_accuracy, step)
+    def log_scalar(self, name: str, value: float, step: int):
+        """Log a scalar value to both MLflow and TensorBoard
 
-    def log_scalar(self, name, value, step):
-        """Log a scalar value to both MLflow and TensorBoard"""
+        Args:
+            name (str): name of the scalar metric
+            value (float): value of the metric
+            step (int): either epoch or each step
+        """
+
         self.writer.add_scalar(tag=name, scalar_value=value, global_step=step)
         mlflow.log_metric(name, value, step=step)
 
