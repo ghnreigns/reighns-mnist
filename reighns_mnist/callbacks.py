@@ -2,6 +2,14 @@ from enum import Enum
 from typing import Union
 
 import numpy as np
+from reighns_mnist import config, utils
+from pathlib import Path
+from argparse import Namespace
+
+# global params path and dict
+params_fp = Path(config.CONFIG_DIR, "params.json")
+global params
+params = Namespace(**utils.load_dict(filepath=params_fp))
 
 
 class Mode(Enum):
@@ -60,6 +68,8 @@ class EarlyStopping:
 
             # update self.best_score
             self.best_score = curr_epoch_score
+            # reset patience once we have a new best score
+            self.patience = params.patience
 
         else:
             self.stopping_counter += 1
