@@ -26,7 +26,7 @@ from torch.utils.tensorboard import SummaryWriter
 from collections import namedtuple
 
 from chardet.universaldetector import UniversalDetector
-from reighns_mnist import config, mnist, callbacks, models
+from reighns_mnist import config, callbacks, models
 from argparse import Namespace
 from typing import *
 

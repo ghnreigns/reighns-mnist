@@ -1,4 +1,6 @@
 from __future__ import print_function
+
+from torch._C import device
 from reighns_mnist import models_test, models, seed, utils, train
 
 from argparse import Namespace
@@ -24,8 +26,10 @@ from collections import namedtuple
 from typing import *
 from pathlib import Path
 from chardet.universaldetector import UniversalDetector
-from reighns_mnist import config, mnist, callbacks
+from reighns_mnist import config, callbacks, plot, seed
 import typer
+import torchvision
+
 
 # Typer CLI app
 app = typer.Typer()
@@ -57,6 +61,8 @@ def train_model(params_fp: Path = Path(config.CONFIG_DIR, "params.json"),
         run_name (Optional[str], optional): [description]. Defaults to "model".
     """
 
+    seed.seed_all(1992)  # seed
+
     # Unpack Parameters from config/params.json file.
     params = Namespace(**utils.load_dict(filepath=params_fp))
 
@@ -68,13 +74,15 @@ def train_model(params_fp: Path = Path(config.CONFIG_DIR, "params.json"),
         run_id: str = run.info.run_uuid
 
         # this ensures that each run is uniquely stored. We store our artifacts to the directory created here.
+        # T1 = Tensorboard Code 1
         output_dir = Path(config.TENSORBOARD, run_id)
         output_dir.mkdir(parents=True, exist_ok=True)
 
         config.logger.info(
             f"Creating MLflow and Tensorboard with run id {run_id}.")
 
-        # Create Tensorboard writer and specify the log_dir where the artifacts from Tensorboard is going to be stored.
+        # T2: Create Tensorboard writer and specify the log_dir where the artifacts from Tensorboard is going to be stored.
+
         writer = SummaryWriter(
             log_dir=output_dir.absolute(), comment='MNIST_LOG')
 
@@ -82,6 +90,7 @@ def train_model(params_fp: Path = Path(config.CONFIG_DIR, "params.json"),
         # Limitation of tensorboard here, somehow it cannot log nested dictionary.
 
         mlflow.log_params(vars(params))
+        # T3
         writer.add_hparams(hparam_dict={}, metric_dict={}, run_name=run_id)
 
         # create loader
@@ -100,8 +109,28 @@ def train_model(params_fp: Path = Path(config.CONFIG_DIR, "params.json"),
             ])),
             batch_size=params.test_bs, shuffle=True, **params.dataloader)
 
+        # T4: get some random training images and write to Tensorboard
+        dataiter = iter(train_loader)
+        one_batch_images, _ = dataiter.next()
+
+        # create grid of images
+        img_grid = torchvision.utils.make_grid(one_batch_images)
+
+        # show images
+        plot.matplotlib_imshow(img_grid, one_channel=True)
+
+        # write to tensorboard
+        writer.add_image('four_fashion_mnist_images', img_grid)
+        # end of T4, quite useful if you want visualize your images.
+
         # construct Trainer class
         model = models.Model().to(device=config.DEVICE)
+        # T5: Visualize Graph of model: Remember to double click on the model in the graph to visualize granular layers.
+        writer.add_graph(
+            model=model, input_to_model=one_batch_images.to(device=config.DEVICE))
+        writer.close()
+        # End of T5
+
         train_loss_fn: torch.nn.modules.loss = torch.nn.CrossEntropyLoss()
         val_loss_fn: torch.nn.modules.loss = torch.nn.CrossEntropyLoss()
         optimizer: torch.optim = torch.optim.SGD(
