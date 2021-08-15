@@ -94,20 +94,23 @@ def train_model(params_fp: Path = Path(config.CONFIG_DIR, "params.json"),
         writer.add_hparams(hparam_dict={}, metric_dict={}, run_name=run_id)
 
         # create loader
-        train_loader = torch.utils.data.DataLoader(
-            datasets.MNIST(root=config.DATA_DIR.absolute(), train=True, download=True,
-                           transform=transforms.Compose([
-                               transforms.ToTensor(),
-                               transforms.Normalize((0.1307,), (0.3081,))
-                           ])),
-            batch_size=params.train_bs, shuffle=True, **params.dataloader)
+        train_dataset = datasets.MNIST(root=config.DATA_DIR.absolute(), train=True, download=True,
+                                       transform=transforms.Compose([
+                                           transforms.ToTensor(),
+                                           transforms.Normalize(
+                                               (0.1307,), (0.3081,))
+                                       ]))
+        test_dataset = datasets.MNIST(root=config.DATA_DIR.absolute(), train=False,
+                                      transform=transforms.Compose([
+                                          transforms.ToTensor(),
+                                          transforms.Normalize(
+                                              (0.1307,), (0.3081,))
+                                      ]))
+        train_loader = torch.utils.data.DataLoader(train_dataset,
+                                                   batch_size=params.train_bs, shuffle=True, **params.dataloader)
 
-        test_loader = torch.utils.data.DataLoader(
-            datasets.MNIST(root=config.DATA_DIR.absolute(), train=False, transform=transforms.Compose([
-                transforms.ToTensor(),
-                transforms.Normalize((0.1307,), (0.3081,))
-            ])),
-            batch_size=params.test_bs, shuffle=True, **params.dataloader)
+        test_loader = torch.utils.data.DataLoader(test_dataset,
+                                                  batch_size=params.test_bs, shuffle=True, **params.dataloader)
 
         # T4: get some random training images and write to Tensorboard
         dataiter = iter(train_loader)
@@ -130,6 +133,24 @@ def train_model(params_fp: Path = Path(config.CONFIG_DIR, "params.json"),
             model=model, input_to_model=one_batch_images.to(device=config.DEVICE))
         writer.close()
         # End of T5
+
+        # select random images and their target indices
+        images, labels = plot.select_n_random(
+            train_dataset.data, train_dataset.targets, n=1000)
+        # Get mapping for classes
+        classes = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
+        # get the class labels for each image
+        class_labels = [classes[lab] for lab in labels]
+
+        # log embeddings
+        features = images.view(-1, 28 * 28)
+        writer.add_embedding(features,
+                             metadata=class_labels,
+                             label_img=images.unsqueeze(1))
+
+        config.logger.info(
+            "You can click on T-SNE to see a nice 3D visualization of Embeddings.")
+        writer.close()
 
         train_loss_fn: torch.nn.modules.loss = torch.nn.CrossEntropyLoss()
         val_loss_fn: torch.nn.modules.loss = torch.nn.CrossEntropyLoss()
