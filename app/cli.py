@@ -57,28 +57,32 @@ def train_model(params_fp: Path = Path(config.CONFIG_DIR, "params.json"),
         run_name (Optional[str], optional): [description]. Defaults to "model".
     """
 
-    # Parameters
+    # Unpack Parameters from config/params.json file.
     params = Namespace(**utils.load_dict(filepath=params_fp))
 
     mlflow.set_experiment(experiment_name=experiment_name)
 
     with mlflow.start_run() as run:
+        # Each run/experiment will yield an unique run_id.
+        # We conveniently use run_id to name our experiment for both mlflow and tensorboard
         run_id: str = run.info.run_uuid
 
-        # Log our parameters into mlflow
-        # vars turns params into a dict
-        for key, value in vars(params).items():
-            mlflow.log_param(key, value)
-
-        # this ensures that each run is uniquely stored
+        # this ensures that each run is uniquely stored. We store our artifacts to the directory created here.
         output_dir = Path(config.TENSORBOARD, run_id)
         output_dir.mkdir(parents=True, exist_ok=True)
 
-        print("Writing TensorFlow events locally to %s\n" %
-              output_dir.absolute())
+        config.logger.info(
+            f"Creating MLflow and Tensorboard with run id {run_id}.")
 
+        # Create Tensorboard writer and specify the log_dir where the artifacts from Tensorboard is going to be stored.
         writer = SummaryWriter(
             log_dir=output_dir.absolute(), comment='MNIST_LOG')
+
+        # Log our parameters into mlflow and tensorboard - we loop through params, note that vars turns params into a dict.
+        # Limitation of tensorboard here, somehow it cannot log nested dictionary.
+
+        mlflow.log_params(vars(params))
+        writer.add_hparams(hparam_dict={}, metric_dict={}, run_name=run_id)
 
         # create loader
         train_loader = torch.utils.data.DataLoader(
@@ -98,23 +102,20 @@ def train_model(params_fp: Path = Path(config.CONFIG_DIR, "params.json"),
 
         # construct Trainer class
         model = models.Model().to(device=config.DEVICE)
-        train_loss_fn: torch.nn = torch.nn.CrossEntropyLoss()
-        val_loss_fn: torch.nn = torch.nn.CrossEntropyLoss()
+        train_loss_fn: torch.nn.modules.loss = torch.nn.CrossEntropyLoss()
+        val_loss_fn: torch.nn.modules.loss = torch.nn.CrossEntropyLoss()
         optimizer: torch.optim = torch.optim.SGD(
             model.parameters(), lr=params.base_lr, momentum=params.momentum)
+
         scheduler: torch.nn = None
         trial = None
-        trainer = train.Trainer(params=params, model=model, device=config.DEVICE,
-                                train_loss_fn=train_loss_fn, val_loss_fn=val_loss_fn, optimizer=optimizer,
-                                scheduler=scheduler, trial=trial, writer=writer,
-                                early_stopping=callbacks.EarlyStopping(patience=3,
-                                                                       mode=callbacks.Mode.MIN,
-                                                                       min_delta=1e-5))
+        trainer: train.Trainer = train.Trainer(params=params, model=model, device=config.DEVICE,
+                                               train_loss_fn=train_loss_fn, val_loss_fn=val_loss_fn, optimizer=optimizer,
+                                               scheduler=scheduler, trial=trial, writer=writer,
+                                               early_stopping=callbacks.EarlyStopping(patience=3,
+                                                                                      mode=callbacks.Mode.MIN,
+                                                                                      min_delta=1e-5))
 
-        # for epoch in range(1, params.epochs + 1):
-        #     # print out active_run
-        #     print("Active Run ID: %s, Epoch: %s \n" %
-        #           (run_id, epoch))
         trainer.fit(train_loader, test_loader)
 
         print("Uploading TensorFlow events as a run artifact.")
